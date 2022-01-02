@@ -596,7 +596,12 @@ discordClient.on("guildMemberRemove", function (GuildMember) {
 });
 
 discordClient.on("presenceUpdate", function (oldMember, newMember) {
-    if (!oldMember.presence || !newMember.presence) {
+    if (
+        !oldMember ||
+        !oldMember.presence ||
+        !newMember ||
+        !newMember.presence
+    ) {
         return;
     }
     if (ircClients.length > 0) {
