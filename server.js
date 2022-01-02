@@ -426,7 +426,7 @@ function guildMemberCheckChannels(guildID, ircDisplayName, guildMember) {
             let channelID = channelDetails.id;
 
             //Let's check the discord channel.
-            let discordMemberArray = discordClient.guilds.cache
+            let discordMemberArray = discordClient.guilds
                 .get(guildID)
                 .channels.get(channelID)
                 .members.array();
