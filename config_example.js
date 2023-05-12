@@ -1,7 +1,7 @@
 global.configuration = {
     DEBUG: false,
     showOfflineUsers: true, // When true all users will always be shown. Offline users will be shown as away on clients that support away-notify.
-    matchClientStatus: true, // When true the discord user's status will be idle on startup, online if a client is connected, dnd when client disconnects
+    matchClientStatus: true, // When true the discord user's status will be idle on startup or when IRC away, online if a client is connected, dnd when client disconnects
     showJoinOnChat: false,
     discordToken: '<TOKEN>',
     tlsEnabled: true,

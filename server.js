@@ -1762,6 +1762,25 @@ let ircServer = net.createServer(netOptions, function (socket) {
 
             if (socket.authenticated && !socket.isCAPBlocked) {
                 switch (parsedLine.command) {
+                    case "AWAY":
+                        if (parsedLine.params.length === 0 || parsedLine.params[0].length === 0) {
+                            // unaway
+                            socket.write(
+                                `:${configuration.ircServer.hostname} 305 ${socket.nickname} :You are no longer marked as being away\r\n`
+                            );
+                            if (configuration.matchClientStatus) {
+                                discordClient.user.setStatus("online");
+                            }
+                        } else {
+                            // away
+                            socket.write(
+                                `:${configuration.ircServer.hostname} 306 ${socket.nickname} :You have been marked as being away\r\n`
+                            );
+                            if (configuration.matchClientStatus) {
+                                discordClient.user.setStatus("idle");
+                            }
+                        }
+                        break;
                     case "JOIN":
                         const joinChannels = parsedLine.params[0].split(",");
 
