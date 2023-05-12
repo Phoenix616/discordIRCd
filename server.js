@@ -347,7 +347,7 @@ discordClient.on("ready", function () {
                 ircDetails[guildID].channels[channelName].canSetTopic =
                     discordClient.guilds
                         .resolve(guildID)
-                        .me.permissionsIn(channel.id)
+                        .members.me.permissionsIn(channel.id)
                         .has("MANAGE_CHANNELS", true);
                 console.log(
                     `channel: ${channel.name} - canSetTopic=${ircDetails[guildID].channels[channelName].canSetTopic}`
@@ -823,7 +823,7 @@ discordClient.on("channelUpdate", function (oldChannel, newChannel) {
                     channel.name
                 ].canSetTopic = discordClient.guilds
                     .resolve(oldChannel.guild.id)
-                    .me.permissionsIn(channel.id)
+                    .members.me.permissionsIn(channel.id)
                     .has("MANAGE_CHANNELS", true);
                 console.log(
                     `channel: ${channel.name} - canSetTopic=${
@@ -844,7 +844,7 @@ discordClient.on("roleUpdate", function (oldRole, newRole) {
         if (
             discordClient.guilds
                 .resolve(discordServerId)
-                .me.roles.has(oldRole.id)
+                .members.me.roles.cache.has(oldRole.id)
         ) {
             console.log(`a role we're in now has different permissions!`);
 
@@ -860,7 +860,7 @@ discordClient.on("roleUpdate", function (oldRole, newRole) {
                         channel.name
                     ].canSetTopic = discordClient.guilds
                         .resolve(oldRole.guild.id)
-                        .me.permissionsIn(channel.id)
+                        .members.me.permissionsIn(channel.id)
                         .has("MANAGE_CHANNELS", true);
                     // console.log(`channel: ${channel.name} - canSetTopic=${ircDetails[oldRole.guild.id].channels[channel.name].canSetTopic}`);
                 }
