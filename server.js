@@ -1661,9 +1661,11 @@ let ircServer = net.createServer(netOptions, function (socket) {
                                 socket.nickname = newNickname;
                                 socket.authenticated = true;
 
+                                const guildName = discordClient.guild != undefined ? discordClient.guild.name : "DM";
+
                                 const connectArray = [
                                     `:${nickname}!${discordClient.user.id}@whatever NICK ${newNickname}\r\n`,
-                                    `:${configuration.ircServer.hostname} 001 ${newNickname} :Welcome to the Discord_${discordClient.guild.name} Internet Relay Chat Network ${newNickname}\r\n`,
+                                    `:${configuration.ircServer.hostname} 001 ${newNickname} :Welcome to the Discord_${guildName} Internet Relay Chat Network ${newNickname}\r\n`,
                                     `:${configuration.ircServer.hostname} 003 ${newNickname} :This server was created specifically for you\r\n`,
                                     `:${configuration.ircServer.hostname} 375 ${newNickname} :- ${configuration.ircServer.hostname} Message of the day - \r\n`,
                                     `:${configuration.ircServer.hostname} 376 ${newNickname} :End of /MOTD command.\r\n`,
