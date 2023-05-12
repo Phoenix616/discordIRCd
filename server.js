@@ -1372,14 +1372,14 @@ function joinCommand(channel, discordID, socketID) {
                             for (let i = 0; i < lines.length; i++) {
                                 sendToIRC(
                                     discordID,
-                                    `:${configuration.ircServer.hostname} PRIVMSG #${channel} ${msg.author.username} :${lines[i]}\r\n`,
+                                    `:${configuration.ircServer.hostname} PRIVMSG #${channel} ${msg.author.username}: :${lines[i]}\r\n`,
                                     socketID
                                 );
                             }
                         } else {
                             sendToIRC(
                                 discordID,
-                                `:${configuration.ircServer.hostname} PRIVMSG #${channel} ${msg.author.username} :${msg.cleanContent}\r\n`,
+                                `:${configuration.ircServer.hostname} PRIVMSG #${channel} ${msg.author.username}: :${msg.cleanContent}\r\n`,
                                 socketID
                             );
                         }
