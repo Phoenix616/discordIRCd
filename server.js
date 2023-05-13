@@ -1018,7 +1018,7 @@ async function handleChannelMessage(msg) {
                         shortenedRef += "...";
                     }
 
-                    const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1D\x15Reply to \x0F"${referencedAuthorIrcName}: ${shortenedRef}"\r\n`;
+                    const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1DReply to \x0F"${referencedAuthorIrcName}: ${shortenedRef}"\r\n`;
                     ircDetails[discordServerId].channels[
                         channelName
                         ].joined.forEach(function (socketID) {
