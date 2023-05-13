@@ -904,132 +904,6 @@ discordClient.on("message", function (msg) {
 
         let messageContent = msg.content;
 
-        if (configuration.handleCode) {
-            const codeRegex = /```(.*?)\r?\n([\s\S]*?)```/;
-            const replaceRegex = /```.*?\r?\n[\s\S]*?```/;
-
-            if (codeRegex.test(messageContent)) {
-                const codeDetails = messageContent.match(codeRegex);
-
-                // In the future I want to include the url in the message. But since the call to gist is async that doesn't fit the current structure.
-                messageContent = messageContent.replace(replaceRegex, "");
-                let extension;
-                let language;
-                if (codeDetails[1]) {
-                    language = codeDetails[1].toLowerCase();
-
-                    switch (language) {
-                        case "javascript":
-                            extension = "js";
-                            break;
-                        case "html":
-                            extension = "html";
-                            break;
-                        case "css":
-                            extension = "css";
-                            break;
-                        case "xml":
-                            extension = "xml";
-                            break;
-                        case "python":
-                            extension = "py";
-                            break;
-                        case "c#":
-                            extension = "cs";
-                            break;
-                        case "c++":
-                            extension = "cc";
-                            break;
-                        case "php":
-                            extension = "php";
-                            break;
-                        default:
-                            extension = "txt";
-                            break;
-                    }
-                } else {
-                    extension = "txt";
-                    language = "unknown";
-                }
-
-                const pasteFIleName = `${authorIrcName}_code.${extension}`;
-
-                let pasteOptions;
-                if (configuration.pasteService === "gist") {
-                    let postBody = {
-                        description: `Code block on ${msg.guild.name} in channel ${channelName} from ${authorIrcName}`,
-                        public: false,
-                        files: {},
-                    };
-
-                    postBody.files[pasteFIleName] = {
-                        content: codeDetails[2],
-                    };
-                    pasteOptions = {
-                        url: "https://api.github.com/gists",
-                        headers: {
-                            Authorization: `token ${configuration.githubToken}`,
-                            "User-Agent": "discordIRCd",
-                        },
-                        method: "POST",
-                        json: postBody,
-                    };
-                } else {
-                    let date = new Date();
-                    let postBody = {
-                        name: pasteFIleName,
-                        description: `Code block on ${msg.guild.name} in channel ${channelName} from ${authorIrcName}`,
-                        expires: new Date(date.setDate(date.getDate() + 14)).toISOString(),
-                        files: [{
-                            name: pasteFIleName,
-                            content: {
-                                format: "text",
-                                value: codeDetails[2]
-                            },
-                        }]
-                    };
-
-                    pasteOptions = {
-                        url: "https://api.paste.gg/v1/pastes",
-                        headers: {
-                            "User-Agent": "discordIRCd",
-                        },
-                        method: "POST",
-                        json: postBody,
-                    };
-                }
-
-                request(pasteOptions, function (error, response, body) {
-                    if (error) {
-                        console.log("Paste error:", error);
-                    }
-                    if (!error && response.statusCode === 201) {
-                        let pasteUrl;
-                        if (configuration.pasteService === "gist") {
-                            pasteUrl = body.html_url;
-                            console.log("Gist: " + pasteUrl);
-                        } else {
-                            pasteUrl = "https://paste.gg/" + body.result.id;
-                            console.log("Paste: " + pasteUrl + ", deletion key: " + body.result.deletion_key);
-                        }
-
-                        const gistMessage = `:${authorIrcName}!${msg.author.id}@whatever PRIVMSG #${channelName} :${pasteUrl}\r\n`;
-                        ircDetails[discordServerId].channels[
-                            channelName
-                        ].joined.forEach(function (socketID) {
-                            sendToIRC(discordServerId, gistMessage, socketID);
-                        });
-                    }
-                    if (!error && response.statusCode !== 201) {
-                        console.log(
-                            "Something went wrong on the gist side of things:",
-                            response.statusCode
-                        );
-                    }
-                });
-            }
-        }
-
         let memberMentioned = false;
         let memberDirectlyMentioned = false;
 
@@ -1067,6 +941,132 @@ discordClient.on("message", function (msg) {
             memberMentioned ||
             memberDirectlyMentioned
         ) {
+            if (configuration.handleCode) {
+                const codeRegex = /```(.*?)\r?\n([\s\S]*?)```/;
+                const replaceRegex = /```.*?\r?\n[\s\S]*?```/;
+
+                if (codeRegex.test(messageContent)) {
+                    const codeDetails = messageContent.match(codeRegex);
+
+                    // In the future I want to include the url in the message. But since the call to gist is async that doesn't fit the current structure.
+                    messageContent = messageContent.replace(replaceRegex, "");
+                    let extension;
+                    let language;
+                    if (codeDetails[1]) {
+                        language = codeDetails[1].toLowerCase();
+
+                        switch (language) {
+                            case "javascript":
+                                extension = "js";
+                                break;
+                            case "html":
+                                extension = "html";
+                                break;
+                            case "css":
+                                extension = "css";
+                                break;
+                            case "xml":
+                                extension = "xml";
+                                break;
+                            case "python":
+                                extension = "py";
+                                break;
+                            case "c#":
+                                extension = "cs";
+                                break;
+                            case "c++":
+                                extension = "cc";
+                                break;
+                            case "php":
+                                extension = "php";
+                                break;
+                            default:
+                                extension = "txt";
+                                break;
+                        }
+                    } else {
+                        extension = "txt";
+                        language = "unknown";
+                    }
+
+                    const pasteFIleName = `${authorIrcName}_code.${extension}`;
+
+                    let pasteOptions;
+                    if (configuration.pasteService === "gist") {
+                        let postBody = {
+                            description: `Code block on ${msg.guild.name} in channel ${channelName} from ${authorIrcName}`,
+                            public: false,
+                            files: {},
+                        };
+
+                        postBody.files[pasteFIleName] = {
+                            content: codeDetails[2],
+                        };
+                        pasteOptions = {
+                            url: "https://api.github.com/gists",
+                            headers: {
+                                Authorization: `token ${configuration.githubToken}`,
+                                "User-Agent": "discordIRCd",
+                            },
+                            method: "POST",
+                            json: postBody,
+                        };
+                    } else {
+                        let date = new Date();
+                        let postBody = {
+                            name: pasteFIleName,
+                            description: `Code block on ${msg.guild.name} in channel ${channelName} from ${authorIrcName}`,
+                            expires: new Date(date.setDate(date.getDate() + 14)).toISOString(),
+                            files: [{
+                                name: pasteFIleName,
+                                content: {
+                                    format: "text",
+                                    value: codeDetails[2]
+                                },
+                            }]
+                        };
+
+                        pasteOptions = {
+                            url: "https://api.paste.gg/v1/pastes",
+                            headers: {
+                                "User-Agent": "discordIRCd",
+                            },
+                            method: "POST",
+                            json: postBody,
+                        };
+                    }
+
+                    request(pasteOptions, function (error, response, body) {
+                        if (error) {
+                            console.log("Paste error:", error);
+                        }
+                        if (!error && response.statusCode === 201) {
+                            let pasteUrl;
+                            if (configuration.pasteService === "gist") {
+                                pasteUrl = body.html_url;
+                                console.log("Gist: " + pasteUrl);
+                            } else {
+                                pasteUrl = "https://paste.gg/" + body.result.id;
+                                console.log("Paste: " + pasteUrl + ", deletion key: " + body.result.deletion_key);
+                            }
+
+                            const gistMessage = `:${authorIrcName}!${msg.author.id}@whatever PRIVMSG #${channelName} :${pasteUrl}\r\n`;
+                            ircDetails[discordServerId].channels[
+                                channelName
+                                ].joined.forEach(function (socketID) {
+                                sendToIRC(discordServerId, gistMessage, socketID);
+                            });
+                        }
+                        if (!error && response.statusCode !== 201) {
+                            console.log(
+                                "Something went wrong on the gist side of things:",
+                                response.statusCode
+                            );
+                        }
+                    });
+                }
+            }
+
             // IRC does not handle newlines. So we split the message up per line and send them seperatly.
             const messageArray = messageContent.split(/\r?\n/);
 
