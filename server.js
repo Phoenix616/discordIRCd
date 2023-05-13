@@ -1165,6 +1165,21 @@ async function handleChannelMessage(msg) {
                 });
             }
 
+            const stickerArray = msg.stickers;
+            if (stickerArray.length > 0) {
+                stickerArray.forEach(function (sticker) {
+                    let url = sticker.url;
+                    if (sticker.format === "LOTTIE") {
+                        const stickerUrlLength = "https://cdn.discordapp.com/stickers/".length;
+                        if (url.length > stickerUrlLength) {
+                            url = "https://lottie.zachbr.io?p=" + encodeURI("/stickers/" + url.substring(stickerUrlLength));
+                        }
+                    }
+                    const stickerLine = `${sticker.name}: ${url}`;
+                    messageArray.push(stickerLine);
+                });
+            }
+
             messageArray.forEach(function (line) {
                 const messageTemplate = `:${authorIrcName}!${msg.author.id}@whatever PRIVMSG #${channelName} :`;
                 const messageTemplateLength = messageTemplate.length;
