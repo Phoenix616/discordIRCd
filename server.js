@@ -433,8 +433,7 @@ function guildMemberCheckChannels(guildID, ircDisplayName, guildMember) {
             discordMemberArray.forEach(function (discordMember) {
                 if (
                     guildMember.displayName === discordMember.displayName &&
-                    (getStatus(guildID, guildMember) !== "offline" ||
-                        configuration.showOfflineUsers)
+                    (configuration.showOfflineUsers || getStatus(guildID, guildMember) !== "offline")
                 ) {
                     isInDiscordChannel = true;
                 }
@@ -881,7 +880,7 @@ discordClient.on("message", function (msg) {
     }
 });
 
-function handleChannelMessage(msg) {
+async function handleChannelMessage(msg) {
     if (ircClients.length > 0 && msg.channel.type === "GUILD_TEXT") {
         const discordServerId = msg.guild.id;
 
@@ -952,6 +951,43 @@ function handleChannelMessage(msg) {
             memberMentioned ||
             memberDirectlyMentioned
         ) {
+            // handle reply
+            if (msg.reference) {
+                let referencedMsg = await msg.fetchReference();
+
+                if (referencedMsg) {
+                    // Webhooks don't have a member.
+                    let referencedAuthorDisplayName;
+                    if (referencedMsg.member) {
+                        referencedAuthorDisplayName = referencedMsg.member.displayName;
+                    } else {
+                        referencedAuthorDisplayName = referencedMsg.author.username;
+                    }
+
+                    const referencedAuthorIrcName = ircNickname(
+                        referencedAuthorDisplayName,
+                        referencedMsg.author.bot,
+                        referencedMsg.author.discriminator
+                    );
+
+                    const referencedContent = referencedMsg.content;
+
+                    let shortenedRef = parseDiscordLine(
+                        referencedContent.substring(0, 100),
+                        discordServerId
+                    );
+                    if (referencedContent.length > 100) {
+                        shortenedRef += "...";
+                    }
+
+                    const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1D\x15Reply to \x0F"${referencedAuthorIrcName}: ${shortenedRef}"\r\n`;
+                    ircDetails[discordServerId].channels[
+                        channelName
+                        ].joined.forEach(function (socketID) {
+                        sendToIRC(discordServerId, message, socketID);
+                    });
+                }
+            }
             if (configuration.handleCode) {
                 const codeRegex = /```(.*?)\r?\n([\s\S]*?)```/;
                 const replaceRegex = /```.*?\r?\n[\s\S]*?```/;
@@ -1147,7 +1183,7 @@ function handleChannelMessage(msg) {
     }
 }
 
-function handleDirectMessage(msg) {
+async function handleDirectMessage(msg) {
     if (ircClients.length > 0 && msg.channel.type === "dm") {
         const discordServerId = "DMserver";
         const authorDisplayName = msg.author.username;
