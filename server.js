@@ -124,14 +124,16 @@ function parseDiscordLine(line, discordID) {
             const userID = mention.replace(/<@!?(\d+?)>/, "$1");
             const memberObject = discordClient.guilds.resolve(discordID)
                 .members.resolve(userID);
-            const displayName = memberObject.displayName;
-            const isBot = memberObject.user.bot;
-            const discriminator = memberObject.user.discriminator;
+            if (memberObject) {
+                const displayName = memberObject.displayName;
+                const isBot = memberObject.user.bot;
+                const discriminator = memberObject.user.discriminator;
 
-            const userName = ircNickname(displayName, isBot, discriminator);
-            const replaceRegex = new RegExp(mention, "g");
-            if (userName) {
-                line = line.replace(replaceRegex, `@${userName}`);
+                const userName = ircNickname(displayName, isBot, discriminator);
+                if (userName) {
+                    const replaceRegex = new RegExp(mention, "g");
+                    line = line.replace(replaceRegex, `@${userName}`);
+                }
             }
         });
     }
@@ -145,8 +147,8 @@ function parseDiscordLine(line, discordID) {
             const roleObject = discordClient.guilds.resolve(discordID)
                 .roles.resolve(roleID);
 
-            const replaceRegex = new RegExp(mention, "g");
             if (roleObject) {
+                const replaceRegex = new RegExp(mention, "g");
                 const name = roleObject.name;
                 line = line.replace(replaceRegex, `@${name}`);
             }
@@ -162,8 +164,8 @@ function parseDiscordLine(line, discordID) {
             const channelObject = discordClient.guilds.resolve(discordID)
                 .channels.resolve(channelID);
 
-            const replaceRegex = new RegExp(mention, "g");
             if (channelObject) {
+                const replaceRegex = new RegExp(mention, "g");
                 const name = channelObject.name;
                 line = line.replace(replaceRegex, `#${name}`);
             }
