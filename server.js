@@ -872,6 +872,15 @@ discordClient.on("roleUpdate", function (oldRole, newRole) {
 // Processing received messages
 discordClient.on("message", function (msg) {
     if (ircClients.length > 0 && msg.channel.type === "GUILD_TEXT") {
+        handleChannelMessage(msg);
+    }
+    if (ircClients.length > 0 && msg.channel.type === "dm") {
+        handleDirectMessage(msg);
+    }
+});
+
+function handleChannelMessage(msg) {
+    if (ircClients.length > 0 && msg.channel.type === "GUILD_TEXT") {
         const discordServerId = msg.guild.id;
 
         // Webhooks don't have a member.
@@ -1134,6 +1143,9 @@ discordClient.on("message", function (msg) {
             });
         }
     }
+}
+
+function handleDirectMessage(msg) {
     if (ircClients.length > 0 && msg.channel.type === "dm") {
         const discordServerId = "DMserver";
         const authorDisplayName = msg.author.username;
@@ -1209,7 +1221,7 @@ discordClient.on("message", function (msg) {
             });
         }
     }
-});
+}
 
 function getStatus(discordID, member) {
     const presence = discordClient.guilds.resolve(discordID).presences.resolve(member.id);
@@ -1364,25 +1376,7 @@ function joinCommand(channel, discordID, socketID) {
                         return msgA.createdAt - msgB.createdAt;
                     })
                     .forEach((msg) => {
-                        // We check if the message we're about to send has more than 1 line.
-                        // If it does, then we need to send them one by one. Otherwise the client
-                        // will try to interpret them as commands.
-                        const lines = msg.cleanContent.split(/\r?\n/);
-                        if (lines.length > 1) {
-                            for (let i = 0; i < lines.length; i++) {
-                                sendToIRC(
-                                    discordID,
-                                    `:${configuration.ircServer.hostname} PRIVMSG #${channel} ${msg.author.username}: :${lines[i]}\r\n`,
-                                    socketID
-                                );
-                            }
-                        } else {
-                            sendToIRC(
-                                discordID,
-                                `:${configuration.ircServer.hostname} PRIVMSG #${channel} ${msg.author.username}: :${msg.cleanContent}\r\n`,
-                                socketID
-                            );
-                        }
+                        handleChannelMessage(msg);
                     });
             });
     } else {
