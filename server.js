@@ -1468,6 +1468,11 @@ function lusersCommand(discordID, ircID) {
         `:${configuration.ircServer.hostname} 254 ${configuration.ircServer.hostname} :${channelCount} channels formed\r\n`,
         ircID
     );
+    sendToIRC(
+        discordID,
+        `:${configuration.ircServer.hostname} 255 ${configuration.ircServer.hostname} :I have ${ircClients.length} clients and ${ircDetails.length} servers\r\n`,
+        ircID
+    );
 }
 
 function getDiscordUserFromIRC(recipient, discordID) {
