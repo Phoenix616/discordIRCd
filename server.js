@@ -172,6 +172,26 @@ function parseDiscordLine(line, discordID) {
         });
     }
 
+    // Handle emojis!
+    const emojiRegex = /(<a?:\w+?:\d+?>)/g;
+    const emojisFound = line.match(emojiRegex);
+    if (emojisFound) {
+        emojisFound.forEach(function (emoji) {
+            const emojiFound = emoji.match(/<a?:(\w+?):(\d+?>)/);
+            const emojiShortand = emojiFound[1];
+            const emojiId = emojiFound[2];
+            const emojiObject = discordClient.guilds.resolve(discordID)
+                .emojis.resolve(emojiId);
+
+            const replaceRegex = new RegExp(emoji, "g");
+            if (emojiObject && emojiObject.url) {
+                line = line.replace(replaceRegex, `:${emojiShortand}: ${emojiObject.url}`);
+            } else {
+                line = line.replace(replaceRegex, `:${emojiShortand}:`);
+            }
+        });
+    }
+
     return line;
 }
 
@@ -241,6 +261,23 @@ function parseIRCLine(line, discordID, channel) {
         });
     }
 
+    // Emojis
+    const emojiRegex = /(:.+?:)/g;
+    const emojisFound = line.match(emojiRegex);
+    if (emojisFound) {
+        emojisFound.forEach(function (emoji) {
+            const emojiName = emoji.replace(/:(.+?):/, "$1");
+
+            const emojiObject = discordClient.guilds.resolve(discordID)
+                .emojis.resolve(emojiName);
+
+            if (emojiObject) {
+                const replaceRegex = new RegExp(emoji, "g");
+                line = line.replace(replaceRegex, `<${emojiObject.identifier}>`);
+            }
+        });
+    }
+
     return line;
 }
 
@@ -299,6 +336,7 @@ discordClient.on("ready", function () {
     discordClient.guilds.cache.forEach(function (guild) {
         //guild.members.fetch();
         //guild.sync();
+        guild.emojis.fetch();
     });
 
     console.log(`Logged in as ${discordClient.user.username}!`);
