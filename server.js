@@ -1330,7 +1330,7 @@ function joinCommand(channel, discordID, socketID) {
     const memberlistTemplate = `:${configuration.ircServer.hostname} 353 ${nickname} @ #${channel} :`;
     const memberlistTemplateLength = memberlistTemplate.length;
 
-    if (ircDetails[discordID].channels.hasOwnProperty(channel)) {
+    if (ircDetails[discordID].channels && ircDetails[discordID].channels.hasOwnProperty(channel)) {
         const channelProperties = ircDetails[discordID].channels[channel];
         const channelContent = discordClient.channels.resolve(
             channelProperties.id
