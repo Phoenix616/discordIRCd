@@ -1506,6 +1506,15 @@ function listCommand(discordID, ircID) {
         sendToIRC(discordID, line, ircID);
     });
 }
+// Who command, let's give back user information.
+function whoReply(socket, nickName, channel) {
+    const userInfo = ircDetails[socket.discordid].members[nickName];
+    if (userInfo) {
+        socket.write(`:${configuration.ircServer.hostname} 352 ` +
+            // "<client> <channel> <username> <host> <server> <nick> <flags> :<hopcount> <realname>"
+            `${socket.nickname} ${channel} ${nickName} discord.com ${socket.discordid} ${nickName} H :1 ${userInfo.discordName}\r\n`);
+    }
+}
 
 // Part command given, let's part the channel.
 function partCommand(channel, discordID, ircID) {
@@ -2157,10 +2166,35 @@ let ircServer = net.createServer(netOptions, function (socket) {
                         }
                         break;
                     case "WHO":
+                        let whoMask = parsedLine.params[0].trim();
+                        if (whoMask.startsWith("#")) {
+                            // this is a channel, just send all known users on this server
+                            for (const key in ircDetails[socket.discordid].members) {
+                                if (ircDetails[socket.discordid].members.hasOwnProperty(key)) {
+                                    whoReply(socket, key, whoMask);
+                                }
+                            }
+                        } else {
+                            // normal user
+                            whoReply(socket, whoMask, "*");
+                        }
+                        socket.write(`:${configuration.ircServer.hostname} 318 ${socket.nickname} ${whoMask} :End of WHO list.\r\n`);
+                        break;
                     case "WHOIS":
-                        const whoisUser = parsedLine.params[0].trim();
-                        const userID =
-                            ircDetails[socket.discordid].members[whoisUser];
+                        let whoisUser = parsedLine.params[0].trim();
+                        if (parsedLine.params.length > 1) {
+                            whoisUser = parsedLine.params[0].trim();
+                        }
+                        if (ircDetails[socket.discordid].members.hasOwnProperty(whoisUser)) {
+                            const userInfo =
+                                ircDetails[socket.discordid].members[whoisUser];
+                            //  "<client> <nick> <username> <host> * :<realname>"
+                            socket.write(`:${configuration.ircServer.hostname} 311 ${socket.nickname} ${whoisUser} ${whoisUser} ${userInfo.ircNick} discord.com *: ${userInfo.discordName}.\r\n`);
+                            socket.write(`:${configuration.ircServer.hostname} 312 ${socket.nickname} ${whoisUser} discord.com : Discord ${socket.discordid}\r\n`);
+                            socket.write(`:${configuration.ircServer.hostname} 318 ${socket.nickname} ${whoisUser} :End of /WHOIS list.\r\n`);
+                        } else {
+                            socket.write(`:${configuration.ircServer.hostname} 401 ${socket.nickname} ${whoisUser} :No such nick/channel.\r\n`);
+                        }
                         break;
                     default:
                         //ERR_UNKNOWNCOMMAND (421)
