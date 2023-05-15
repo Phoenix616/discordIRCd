@@ -177,7 +177,7 @@ function parseDiscordLine(line, discordID) {
     const emojisFound = line.match(emojiRegex);
     if (emojisFound) {
         emojisFound.forEach(function (emoji) {
-            const emojiFound = emoji.match(/<a?:(\w+?):(\d+?>)/);
+            const emojiFound = emoji.match(/<a?:(\w+?):(\d+?)>/);
             const emojiShortand = emojiFound[1];
             const emojiId = emojiFound[2];
             const emojiObject = discordClient.guilds.resolve(discordID)
@@ -187,7 +187,7 @@ function parseDiscordLine(line, discordID) {
             if (emojiObject && emojiObject.url) {
                 line = line.replace(replaceRegex, `:${emojiShortand}: ${emojiObject.url}`);
             } else {
-                line = line.replace(replaceRegex, `:${emojiShortand}:`);
+                line = line.replace(replaceRegex, `:${emojiShortand}: https://cdn.discordapp.com/emojis/${emojiId}`);
             }
         });
     }
