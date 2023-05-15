@@ -1156,29 +1156,35 @@ async function handleChannelMessage(msg) {
             const messageArray = messageContent.split(/\r?\n/);
 
             const attachmentArray = msg.attachments;
-            if (attachmentArray.length > 0) {
-                attachmentArray.forEach(function (attachment) {
-                    const filename = attachment.filename;
-                    const url = attachment.url;
-                    const attachmentLine = `${filename}: ${url}`;
-                    messageArray.push(attachmentLine);
-                });
-            }
+            attachmentArray.forEach(function (attachment) {
+                let attachmentLine = attachment.url;
+                if (attachment.filename) {
+                    attachmentLine = `${attachment.filename}: ${attachmentLine}`;
+                }
+                if (attachment.description) {
+                    attachmentLine = `${attachment.description} | ${attachmentLine}`;
+                }
+                if (attachment.name) {
+                    attachmentLine = `${attachment.name} | ${attachmentLine}`;
+                }
+                if (attachment.spoiler) {
+                    attachmentLine = `[SPOILER] ${attachmentLine}`;
+                }
+                messageArray.push(attachmentLine);
+            });
 
             const stickerArray = msg.stickers;
-            if (stickerArray.length > 0) {
-                stickerArray.forEach(function (sticker) {
-                    let url = sticker.url;
-                    if (sticker.format === "LOTTIE") {
-                        const stickerUrlLength = "https://cdn.discordapp.com/stickers/".length;
-                        if (url.length > stickerUrlLength) {
-                            url = "https://lottie.zachbr.io?p=" + encodeURI("/stickers/" + url.substring(stickerUrlLength));
-                        }
+            stickerArray.forEach(function (sticker) {
+                let url = sticker.url;
+                if (sticker.format === "LOTTIE") {
+                    const stickerUrlLength = "https://cdn.discordapp.com/stickers/".length;
+                    if (url.length > stickerUrlLength) {
+                        url = "https://lottie.zachbr.io?p=" + encodeURI("/stickers/" + url.substring(stickerUrlLength));
                     }
-                    const stickerLine = `${sticker.name}: ${url}`;
-                    messageArray.push(stickerLine);
-                });
-            }
+                }
+                const stickerLine = `${sticker.name}: ${url}`;
+                messageArray.push(stickerLine);
+            });
 
             messageArray.forEach(function (line) {
                 const messageTemplate = `:${authorIrcName}!${msg.author.id}@whatever PRIVMSG #${channelName} :`;
