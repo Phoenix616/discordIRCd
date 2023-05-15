@@ -909,7 +909,7 @@ discordClient.on("roleUpdate", function (oldRole, newRole) {
 });
 
 // Processing received messages
-discordClient.on("message", function (msg) {
+discordClient.on("messageCreate", function (msg) {
     if (ircClients.length > 0 && msg.channel.type === "GUILD_TEXT") {
         handleChannelMessage(msg);
     }
@@ -1249,7 +1249,7 @@ async function handleChannelMessage(msg) {
 }
 
 async function handleDirectMessage(msg) {
-    if (ircClients.length > 0 && msg.channel.type === "dm") {
+    if (ircClients.length > 0 && msg.channel.type === "DM") {
         const discordServerId = "DMserver";
         const authorDisplayName = msg.author.username;
         const authorIsBot = msg.author.bot;
@@ -1325,6 +1325,159 @@ async function handleDirectMessage(msg) {
         }
     }
 }
+
+discordClient.on("messageDeleteBulk", function (msges) {
+    if (ircClients.length > 0) {
+        const deletedAuthors = [];
+        msges.forEach(function (msg) {
+            if (msg.createdAt > Date.now() - 1000 * 60 * 30 && msg.channel.type === "GUILD_TEXT") {
+                const discordServerId = msg.guild.id;
+                const channelName = msg.channel.name;
+                if (ircDetails[discordServerId].channels[channelName].joined.length === 0) {
+                    return;
+                }
+                // Webhooks don't have a member.
+                let authorDisplayName;
+
+                if (msg.member) {
+                    authorDisplayName = msg.member.displayName;
+                } else {
+                    authorDisplayName = msg.author.username;
+                }
+
+                const isBot = msg.author.bot;
+                const discriminator = msg.author.discriminator;
+                const authorIrcName = ircNickname(
+                    authorDisplayName,
+                    isBot,
+                    discriminator
+                );
+
+                if (!deletedAuthors.hasOwnProperty(discordServerId)) {
+                    deletedAuthors[discordServerId] = [];
+                }
+
+                if (!deletedAuthors[discordServerId].hasOwnProperty(channelName)) {
+                    deletedAuthors[discordServerId][channelName] = [];
+                }
+
+                if (deletedAuthors[discordServerId][channelName].hasOwnProperty(authorIrcName)) {
+                    deletedAuthors[discordServerId][channelName][authorIrcName] = deletedAuthors[discordServerId][channelName][authorIrcName]++;
+                } else {
+                    deletedAuthors[discordServerId][channelName][authorIrcName] = 1;
+                }
+            }
+        });
+
+        for (const [discordId, channels] in Object.entries(deletedAuthors)) {
+            for (const [channel, authors] in Object.entries(channels)) {
+                let deleted = "";
+                for (const [author, amount] in Object.entries(authors)) {
+                    if (deleted.length > 0) {
+                        deleted += ", ";
+                    }
+                    deleted += `${author} (${amount})`;
+                }
+                const message = `:_!${discordId}@whatever PRIVMSG #${channel} :\x1D$Deleted messages from\x0F ${deleted}\r\n`;
+                ircDetails[discordId].channels[
+                    channel
+                    ].joined.forEach(function (socketID) {
+                        sendToIRC(discordId, message, socketID);
+                    });
+            }
+        }
+
+    }
+});
+
+discordClient.on("messageDelete", function (msg) {
+    if (msg.createdAt < Date.now() - 1000 * 60 * 30) {
+        // older than 10 minutes, return
+        return;
+    }
+    if (ircClients.length > 0 && msg.channel.type === "GUILD_TEXT") {
+        const discordServerId = msg.guild.id;
+        const channelName = msg.channel.name;
+        if (ircDetails[discordServerId].channels[channelName].joined.length === 0) {
+            return;
+        }
+        // Webhooks don't have a member.
+        let authorDisplayName;
+
+        if (msg.member) {
+            authorDisplayName = msg.member.displayName;
+        } else {
+            authorDisplayName = msg.author.username;
+        }
+
+        const isBot = msg.author.bot;
+        const discriminator = msg.author.discriminator;
+        const authorIrcName = ircNickname(
+            authorDisplayName,
+            isBot,
+            discriminator
+        );
+
+        let messageContent = msg.content;
+
+        let shortenedMsg = messageContent.substring(0, 100);
+        if (messageContent.length > 100) {
+            shortenedMsg += "...";
+        }
+
+        const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1DDeleted message\x0F "${authorIrcName}: ${shortenedMsg}"\r\n`;
+        ircDetails[discordServerId].channels[
+            channelName
+            ].joined.forEach(function (socketID) {
+            sendToIRC(discordServerId, message, socketID);
+        });
+    }
+});
+
+discordClient.on("messageUpdate", function (oldMsg, newMsg) {
+    if (oldMsg.createdAt < Date.now() - 1000 * 60 * 30) {
+        // older than 10 minutes, return
+        return;
+    }
+    if (ircClients.length > 0 && oldMsg.channel.type === "GUILD_TEXT") {
+        const discordServerId = oldMsg.guild.id;
+        const channelName = oldMsg.channel.name;
+        if (ircDetails[discordServerId].channels[channelName].joined.length === 0) {
+            return;
+        }
+        // Webhooks don't have a member.
+        let authorDisplayName;
+
+        if (oldMsg.member) {
+            authorDisplayName = oldMsg.member.displayName;
+        } else {
+            authorDisplayName = oldMsg.author.username;
+        }
+
+        const isBot = oldMsg.author.bot;
+        const discriminator = oldMsg.author.discriminator;
+        const authorIrcName = ircNickname(
+            authorDisplayName,
+            isBot,
+            discriminator
+        );
+
+        let messageContent = oldMsg.content;
+
+        let shortenedMsg = messageContent.substring(0, 64);
+        if (messageContent.length > 64) {
+            shortenedMsg += "...";
+        }
+
+        const updateInfo = `:_!${oldMsg.author.id}@whatever PRIVMSG #${channelName} :\x1D${authorIrcName} edited their message\x0F "${shortenedMsg}":\r\n`;
+        ircDetails[discordServerId].channels[
+            channelName
+            ].joined.forEach(function (socketID) {
+            sendToIRC(discordServerId, updateInfo, socketID);
+        });
+        handleChannelMessage(newMsg);
+    }
+});
 
 function getStatus(discordID, member) {
     const presence = discordClient.guilds.resolve(discordID).presences.resolve(member.id);
