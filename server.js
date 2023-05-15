@@ -1167,9 +1167,6 @@ async function handleChannelMessage(msg) {
                 if (attachment.name) {
                     attachmentLine = `${attachment.name} | ${attachmentLine}`;
                 }
-                if (attachment.spoiler) {
-                    attachmentLine = `[SPOILER] ${attachmentLine}`;
-                }
                 messageArray.push(attachmentLine);
             });
 
