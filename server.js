@@ -991,34 +991,43 @@ async function handleChannelMessage(msg) {
         ) {
             // handle reply
             if (msg.reference) {
-                let referencedMsg = await msg.fetchReference();
+                try {
+                    let referencedMsg = await msg.fetchReference();
 
-                if (referencedMsg) {
-                    // Webhooks don't have a member.
-                    let referencedAuthorDisplayName;
-                    if (referencedMsg.member) {
-                        referencedAuthorDisplayName = referencedMsg.member.displayName;
-                    } else {
-                        referencedAuthorDisplayName = referencedMsg.author.username;
+                    if (referencedMsg) {
+                        // Webhooks don't have a member.
+                        let referencedAuthorDisplayName;
+                        if (referencedMsg.member) {
+                            referencedAuthorDisplayName = referencedMsg.member.displayName;
+                        } else {
+                            referencedAuthorDisplayName = referencedMsg.author.username;
+                        }
+
+                        const referencedAuthorIrcName = ircNickname(
+                            referencedAuthorDisplayName,
+                            referencedMsg.author.bot,
+                            referencedMsg.author.discriminator
+                        );
+
+                        const referencedContent = referencedMsg.content;
+
+                        let shortenedRef = parseDiscordLine(
+                            referencedContent.substring(0, 100),
+                            discordServerId
+                        );
+                        if (referencedContent.length > 100) {
+                            shortenedRef += "...";
+                        }
+
+                        const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1DReply to \x0F"${referencedAuthorIrcName}: ${shortenedRef}"\r\n`;
+                        ircDetails[discordServerId].channels[
+                            channelName
+                            ].joined.forEach(function (socketID) {
+                            sendToIRC(discordServerId, message, socketID);
+                        });
                     }
-
-                    const referencedAuthorIrcName = ircNickname(
-                        referencedAuthorDisplayName,
-                        referencedMsg.author.bot,
-                        referencedMsg.author.discriminator
-                    );
-
-                    const referencedContent = referencedMsg.content;
-
-                    let shortenedRef = parseDiscordLine(
-                        referencedContent.substring(0, 100),
-                        discordServerId
-                    );
-                    if (referencedContent.length > 100) {
-                        shortenedRef += "...";
-                    }
-
-                    const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1DReply to \x0F"${referencedAuthorIrcName}: ${shortenedRef}"\r\n`;
+                } catch (dereferenceError) {
+                    const message = `:_!${msg.author.id}@whatever PRIVMSG #${channelName} :\x1DReply to an unknown message\x0F (${msg.reference.messageId})\r\n`;
                     ircDetails[discordServerId].channels[
                         channelName
                         ].joined.forEach(function (socketID) {
@@ -1468,25 +1477,23 @@ function joinCommand(channel, discordID, socketID) {
         const messageLimit = configuration.discord.messageLimit;
         if (messageLimit === 0) return;
 
-        try {
-            // Fetch the last n Messages
-            channelContent.messages
-                .fetch({limit: messageLimit})
-                .then((messages) => {
-                    console.log(`Fetched messages for "${channel}"`);
-                    // For some reason the messages are not ordered. So we need to sort
-                    // them by creation date before we do anything.
-                    messages
-                        .sort((msgA, msgB) => {
-                            return msgA.createdAt - msgB.createdAt;
-                        })
-                        .forEach((msg) => {
-                            handleChannelMessage(msg);
-                        });
-                });
-        } catch (discordAPIError) {
-            sendToIRC(discordID, `:${configuration.ircServer.hostname} 473 ${nickname} #${channel} :Cannot join channel ${discordAPIError}\r\n`, socketID);
-        }
+        // Fetch the last n Messages
+        channelContent.messages
+            .fetch({limit: messageLimit})
+            .then((messages) => {
+                console.log(`Fetched messages for "${channel}"`);
+                // For some reason the messages are not ordered. So we need to sort
+                // them by creation date before we do anything.
+                messages
+                    .sort((msgA, msgB) => {
+                        return msgA.createdAt - msgB.createdAt;
+                    })
+                    .forEach((msg) => {
+                        handleChannelMessage(msg);
+                    });
+            }).catch(discordAPIError => {
+                sendToIRC(discordID, `:${configuration.ircServer.hostname} 473 ${nickname} #${channel} :Cannot join channel ${discordAPIError}\r\n`, socketID);
+            });
     } else {
         sendToIRC(discordID, `:${configuration.ircServer.hostname} 403 ${nickname} #${channel} :No such channel\r\n`, socketID);
     }
