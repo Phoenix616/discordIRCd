@@ -268,12 +268,15 @@ function parseIRCLine(line, discordID, channel) {
         emojisFound.forEach(function (emoji) {
             const emojiName = emoji.replace(/:(.+?):/, "$1");
 
-            const emojiObject = discordClient.guilds.resolve(discordID)
-                .emojis.resolve(emojiName);
+            if (ircDetails[discordID].emojis.hasOwnProperty(emojiName)) {
+                const emojiObject = ircDetails[discordID].emojis[emojiName];
 
-            if (emojiObject) {
-                const replaceRegex = new RegExp(emoji, "g");
-                line = line.replace(replaceRegex, `<${emojiObject.identifier}>`);
+                if (emojiObject) {
+                    const replaceRegex = new RegExp(emoji, "g");
+                    line = line.replace(replaceRegex, `<:${emojiObject.identifier}>`);
+                } else {
+                    console.log(`unable to get emoji ${emojiName} even though we had it cached?`);
+                }
             }
         });
     }
@@ -333,11 +336,10 @@ discordClient.on("ready", function () {
     }
 
     // This is probably not needed, but since sometimes things are weird with discord.
-    discordClient.guilds.cache.forEach(function (guild) {
+    //discordClient.guilds.cache.forEach(function (guild) {
         //guild.members.fetch();
         //guild.sync();
-        guild.emojis.fetch();
-    });
+    //});
 
     console.log(`Logged in as ${discordClient.user.username}!`);
 
@@ -348,13 +350,17 @@ discordClient.on("ready", function () {
 
         discordClient.guilds.cache.forEach(function (guild) {
             const guildID = guild.id;
+            const guildName = guild.name;
             if (!ircDetails.hasOwnProperty(guildID)) {
                 ircDetails[guildID] = {
                     lastPRIVMSG: [],
                     channels: {},
                     members: {},
+                    emojis: {}
                 };
             }
+
+            console.log(`Members of ${guildName}:`);
 
             guild.members.cache.forEach(function (member) {
                 const ircDisplayName = ircNickname(
@@ -363,36 +369,49 @@ discordClient.on("ready", function () {
                     member.user.discriminator
                 );
                 ircDetails[guildID].members[ircDisplayName] = member.id;
-                console.log(`Found member ${member.displayName} as ${member.ircDisplayName} on ${guild.name}`);
+                console.log(`Found member ${member.displayName} as ${member.ircDisplayName}`);
             });
-        });
 
-        discordClient.channels.cache.forEach(function (channel) {
-            // Of course only for channels.
-            if (channel.type === "GUILD_TEXT") {
-                const guildID = channel.guild.id,
-                    channelName = channel.name,
-                    channelID = channel.id,
-                    channelTopic = channel.topic || "No topic",
-                    canSetTopic = false;
+            console.log(`Channels of ${guildName}:`);
 
-                ircDetails[guildID].channels[channelName] = {
-                    id: channelID,
-                    joined: [],
-                    topic: channelTopic,
-                    canSetTopic: canSetTopic,
-                };
+            guild.channels.cache.forEach(function (channel) {
+                // Of course only for channels.
+                if (channel.type === "GUILD_TEXT") {
+                    const channelName = channel.name,
+                        channelID = channel.id,
+                        channelTopic = channel.topic || "No topic",
+                        canSetTopic = false;
 
-                // parse channels for topic editability
-                ircDetails[guildID].channels[channelName].canSetTopic =
-                    discordClient.guilds
-                        .resolve(guildID)
-                        .members.me.permissionsIn(channel.id)
-                        .has("MANAGE_CHANNELS", true);
-                console.log(
-                    `channel: ${channel.name} - canSetTopic=${ircDetails[guildID].channels[channelName].canSetTopic}`
-                );
-            }
+                    ircDetails[guildID].channels[channelName] = {
+                        id: channelID,
+                        joined: [],
+                        topic: channelTopic,
+                        canSetTopic: canSetTopic,
+                    };
+
+                    // parse channels for topic editability
+                    ircDetails[guildID].channels[channelName].canSetTopic =
+                        guild.members.me.permissionsIn(channel.id)
+                            .has("MANAGE_CHANNELS", true);
+                    console.log(
+                        `${channel.name} - canSetTopic=${ircDetails[guildID].channels[channelName].canSetTopic}`
+                    );
+                }
+            });
+
+            console.log(`Emojis of ${guildName}:`);
+
+            guild.emojis.fetch()
+                .then(emojis => {
+                    emojis.forEach(function (emoji) {
+                        ircDetails[guildID].emojis[emoji.name] = emoji;
+                        console.log(
+                            `${emoji.identifier} - ${emoji.animated} - ${emoji.url}`
+                        );
+                    });
+                })
+                .catch(console.error);
+
         });
 
         // Now that is done we can start the irc server side of things.
@@ -1477,6 +1496,22 @@ discordClient.on("messageUpdate", function (oldMsg, newMsg) {
         });
         handleChannelMessage(newMsg);
     }
+});
+
+discordClient.on("emojiCreate", function (emoji) {
+    ircDetails[emoji.guild.id].emojis[emoji.name] = emoji;
+    console.log(`Added emoji ${emoji.identifier} to ${emoji.guild.name}: ${emoji.url}`);
+});
+
+discordClient.on("emojiDelete", function (emoji) {
+    delete ircDetails[emoji.guild.id].emojis[emoji.name];
+    console.log(`Deleted emoji ${emoji.identifier} from ${emoji.guild.name}`);
+});
+
+discordClient.on("emojiUpdate", function (oldEmoji, newEmoji) {
+    delete ircDetails[oldEmoji.guild.id].emojis[oldEmoji.name];
+    ircDetails[newEmoji.guild.id].emojis[newEmoji.name] = newEmoji;
+    console.log(`Updated emoji ${oldEmoji.identifier} to ${newEmoji.identifier} of ${newEmoji.guild.name}: ${newEmoji.url}`);
 });
 
 function getStatus(discordID, member) {
