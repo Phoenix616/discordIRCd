@@ -1324,17 +1324,27 @@ function getStatus(discordID, member) {
 
 // Join command given, let's join the channel.
 function joinCommand(channel, discordID, socketID) {
-    let members = "";
-    let memberListLines = [];
     const nickname = ircDetails[discordID].ircDisplayName;
-    const memberlistTemplate = `:${configuration.ircServer.hostname} 353 ${nickname} @ #${channel} :`;
-    const memberlistTemplateLength = memberlistTemplate.length;
 
     if (ircDetails[discordID].channels && ircDetails[discordID].channels.hasOwnProperty(channel)) {
+        let members = "";
+        let memberListLines = [];
+        const memberlistTemplate = `:${configuration.ircServer.hostname} 353 ${nickname} @ #${channel} :`;
+        const memberlistTemplateLength = memberlistTemplate.length;
+
         const channelProperties = ircDetails[discordID].channels[channel];
         const channelContent = discordClient.channels.resolve(
             channelProperties.id
         );
+
+        // check permissions
+        if (!discordClient.guilds
+            .resolve(discordID)
+            .members.me.permissionsIn(channelProperties.id)
+            .has("VIEW_CHANNEL", true)) {
+            sendToIRC(discordID, `:${configuration.ircServer.hostname} 473 ${nickname} #${channel} :Cannot join channel\r\n`, socketID);
+            return;
+        }
 
         ircDetails[discordID].channels[channel].joined.push(socketID);
         ircDetails[discordID].channels[channel]["members"] = {};
@@ -1455,24 +1465,27 @@ function joinCommand(channel, discordID, socketID) {
         const messageLimit = configuration.discord.messageLimit;
         if (messageLimit === 0) return;
 
-        // Fetch the last n Messages
-        channelContent.messages
-            .fetch({ limit: messageLimit })
-            .then((messages) => {
-                console.log(`Fetched messages for "${channel}"`);
-                // For some reason the messages are not ordered. So we need to sort
-                // them by creation date before we do anything.
-                messages
-                    .sort((msgA, msgB) => {
-                        return msgA.createdAt - msgB.createdAt;
-                    })
-                    .forEach((msg) => {
-                        handleChannelMessage(msg);
-                    });
-            });
+        try {
+            // Fetch the last n Messages
+            channelContent.messages
+                .fetch({limit: messageLimit})
+                .then((messages) => {
+                    console.log(`Fetched messages for "${channel}"`);
+                    // For some reason the messages are not ordered. So we need to sort
+                    // them by creation date before we do anything.
+                    messages
+                        .sort((msgA, msgB) => {
+                            return msgA.createdAt - msgB.createdAt;
+                        })
+                        .forEach((msg) => {
+                            handleChannelMessage(msg);
+                        });
+                });
+        } catch (discordAPIError) {
+            sendToIRC(discordID, `:${configuration.ircServer.hostname} 473 ${nickname} #${channel} :Cannot join channel ${discordAPIError}\r\n`, socketID);
+        }
     } else {
-        const ERR_INVITEONLYCHAN = `:${configuration.ircServer.hostname} 473 ${nickname} #${channel} :Cannot join channel\r\n`;
-        sendToIRC(discordID, ERR_INVITEONLYCHAN, socketID);
+        sendToIRC(discordID, `:${configuration.ircServer.hostname} 403 ${nickname} #${channel} :No such channel\r\n`, socketID);
     }
 }
 
