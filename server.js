@@ -1464,6 +1464,12 @@ discordClient.on("messageUpdate", function (oldMsg, newMsg) {
         if (ircDetails[discordServerId].channels[channelName].joined.length === 0) {
             return;
         }
+
+        if (oldMsg.content === newMsg.content) {
+            // we only care about messages that changed their text...
+            return;
+        }
+
         // Webhooks don't have a member.
         let authorDisplayName;
 
