@@ -1465,7 +1465,7 @@ discordClient.on("messageUpdate", function (oldMsg, newMsg) {
             return;
         }
 
-        if (oldMsg.content === newMsg.content) {
+        if (oldMsg.content === newMsg.content || newMsg.content.length === 0) {
             // we only care about messages that changed their text...
             return;
         }
