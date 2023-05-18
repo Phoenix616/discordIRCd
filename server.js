@@ -1852,6 +1852,9 @@ let ircServer = net.createServer(netOptions, function (socket) {
         console.log("data:", data);
         // Data can be multiple lines. Here we put each line in an array.
         let dataArray = data.match(/.+/g);
+        if (!dataArray) {
+            return;
+        }
         dataArray.forEach(function (line) {
             let parsedLine = parseMessage(line);
 
