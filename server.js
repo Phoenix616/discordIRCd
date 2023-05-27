@@ -1388,10 +1388,10 @@ discordClient.on("messageDeleteBulk", function (msges) {
             }
         });
 
-        for (const [discordId, channels] in Object.entries(deletedAuthors)) {
-            for (const [channel, authors] in Object.entries(channels)) {
+        for (const [discordId, channels] of Object.entries(deletedAuthors)) {
+            for (const [channel, authors] of Object.entries(channels)) {
                 let deleted = "";
-                for (const [author, amount] in Object.entries(authors)) {
+                for (const [author, amount] of Object.entries(authors)) {
                     if (deleted.length > 0) {
                         deleted += ", ";
                     }
