@@ -859,6 +859,8 @@ discordClient.on("channelUpdate", function (oldChannel, newChannel) {
         ircClients.forEach(function (socket) {
             if (
                 socket.discordid === discordServerId &&
+                newChannel.name in ircDetails[discordServerId].channels &&
+                ircDetails[discordServerId].channels !== undefined &&
                 ircDetails[discordServerId].channels[
                     newChannel.name
                 ].joined.indexOf(socket.ircid) > -1
