@@ -415,7 +415,7 @@ discordClient.on("ready", function () {
         });
 
         // Now that is done we can start the irc server side of things.
-        ircServer.listen(configuration.ircServer.listenPort);
+        ircServer.listen(configuration.ircServer.listenPort, configuration.ircServer.listenAddress);
     } else {
         sendGeneralNotice("Discord connection has been restored.");
     }

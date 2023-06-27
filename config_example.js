@@ -16,6 +16,7 @@ global.configuration = {
     pasteService: 'paste.gg', // possible ones: paste.gg, gist
     githubToken: '<TOKEN>',
     ircServer: {
+        listenAddress: '127.0.0.1',
         listenPort: 6667,
         hostname: '<HOSTNAME>',
         username: '<USERNAME>'
