@@ -92,10 +92,13 @@ function ircNickname(discordDisplayName, botuser, discriminator) {
     const shortenRegex = /_+/g;
 
     if (replaceRegex.test(discordDisplayName)) {
-        let newDisplayname = `${discordDisplayName.replace(
+        let newDisplayname = discordDisplayName.replace(
             replaceRegex,
             "_"
-        )}${discriminator}`;
+        );
+        if (discriminator != 0) {
+            newDisplayname = `${newDisplayname}${discriminator}`;
+        }
         newDisplayname = newDisplayname.replace(shortenRegex, "_");
 
         return botuser ? `${newDisplayname}[BOT]` : newDisplayname;
