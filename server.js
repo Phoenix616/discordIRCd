@@ -1445,6 +1445,7 @@ discordClient.on("messageDelete", function (msg) {
         let messageContent = msg.content;
 
         let shortenedMsg = messageContent.substring(0, 100);
+        shortenedMsg = shortenedMsg.replace(/\r?\n/g, "\\n");
         if (messageContent.length > 100) {
             shortenedMsg += "...";
         }
@@ -1495,6 +1496,7 @@ discordClient.on("messageUpdate", function (oldMsg, newMsg) {
         let messageContent = oldMsg.content;
 
         let shortenedMsg = messageContent.substring(0, 64);
+        shortenedMsg = shortenedMsg.replace(/\r?\n/g, "\\n");
         if (messageContent.length > 64) {
             shortenedMsg += "...";
         }
