@@ -87,7 +87,7 @@ function parseMessage(line) {
 // Returns a number based on the discord server that increases per call.
 // Used to make fairly sure nicknames on irc end up being unique after being scrubbed.
 // Make nicknames work for irc.
-function ircNickname(discordDisplayName, botuser, discriminator) {
+function ircNickname(discordDisplayName, discordUserName, botuser, discriminator) {
     const replaceRegex = /[^a-zA-Z0-9_\\[\]\{\}\^`\|]/g;
     const shortenRegex = /_+/g;
 
@@ -100,6 +100,10 @@ function ircNickname(discordDisplayName, botuser, discriminator) {
             newDisplayname = `${newDisplayname}${discriminator}`;
         }
         newDisplayname = newDisplayname.replace(shortenRegex, "_");
+
+        if (newDisplayname === "_" && !replaceRegex.test(discordUserName)) {
+            newDisplayname = discordUserName;
+        }
 
         return botuser ? `${newDisplayname}[BOT]` : newDisplayname;
     } else {
@@ -132,7 +136,7 @@ function parseDiscordLine(line, discordID) {
                 const isBot = memberObject.user.bot;
                 const discriminator = memberObject.user.discriminator;
 
-                const userName = ircNickname(displayName, isBot, discriminator);
+                const userName = ircNickname(displayName, memberObject.user.username, isBot, discriminator);
                 if (userName) {
                     const replaceRegex = new RegExp(mention, "g");
                     line = line.replace(replaceRegex, `@${userName}`);
@@ -368,6 +372,7 @@ discordClient.on("ready", function () {
             guild.members.cache.forEach(function (member) {
                 const ircDisplayName = ircNickname(
                     member.displayName,
+                    member.user.username,
                     member.user.bot,
                     member.user.discriminator
                 );
@@ -650,6 +655,7 @@ discordClient.on("guildMemberRemove", function (GuildMember) {
 
         const ircDisplayName = ircNickname(
             GuildMember.displayName,
+            GuildMember.username,
             isBot,
             discriminator
         );
@@ -673,6 +679,7 @@ discordClient.on("presenceUpdate", function (oldMember, newMember) {
 
         const ircDisplayName = ircNickname(
             newMember.displayName,
+            newMember.user.username,
             isBot,
             discriminator
         );
@@ -736,11 +743,13 @@ discordClient.on("guildMemberUpdate", function (oldMember, newMember) {
         const discriminator = newMember.user.discriminator;
         const oldIrcDisplayName = ircNickname(
             oldMember.displayName,
+            oldMember.user.username,
             oldIsBot,
             discriminator
         );
         const newIrcDisplayName = ircNickname(
             newMember.displayName,
+            newMember.user.username,
             newIsBot,
             discriminator
         );
@@ -774,6 +783,7 @@ discordClient.on("guildMemberAdd", function (GuildMember) {
         const discriminator = GuildMember.user.discriminator;
         const ircDisplayName = ircNickname(
             GuildMember.displayName,
+            GuildMember.user.username,
             isBot,
             discriminator
         );
@@ -959,6 +969,7 @@ async function handleChannelMessage(msg) {
         const discriminator = msg.author.discriminator;
         const authorIrcName = ircNickname(
             authorDisplayName,
+            msg.author.username,
             isBot,
             discriminator
         );
@@ -1029,6 +1040,7 @@ async function handleChannelMessage(msg) {
 
                         const referencedAuthorIrcName = ircNickname(
                             referencedAuthorDisplayName,
+                            referencedMsg.author.username,
                             referencedMsg.author.bot,
                             referencedMsg.author.discriminator
                         );
@@ -1275,18 +1287,21 @@ async function handleChannelMessage(msg) {
 async function handleDirectMessage(msg) {
     if (ircClients.length > 0 && msg.channel.type === "DM") {
         const discordServerId = "DMserver";
-        const authorDisplayName = msg.author.username;
+        const authorDisplayName = msg.author.globalName ? msg.author.globalName : msg.author.username;
         const authorIsBot = msg.author.bot;
         const authorDiscriminator = msg.author.discriminator;
         const authorIrcName = ircNickname(
             authorDisplayName,
+            msg.author.username,
             authorIsBot,
             authorDiscriminator
         );
 
+        const recipientDisplayName =  msg.channel.recipient.globalName ? msg.channel.recipient.globalName : msg.channel.recipient.username;
         const recipientIsBot = msg.channel.recipient.bot;
         const recipientDiscriminator = msg.channel.recipient.discriminator;
         const recipient = ircNickname(
+            recipientDisplayName,
             msg.channel.recipient.username,
             recipientIsBot,
             recipientDiscriminator
@@ -1373,6 +1388,7 @@ discordClient.on("messageDeleteBulk", function (msges) {
                 const discriminator = msg.author.discriminator;
                 const authorIrcName = ircNickname(
                     authorDisplayName,
+                    msg.author.username,
                     isBot,
                     discriminator
                 );
@@ -1438,6 +1454,7 @@ discordClient.on("messageDelete", function (msg) {
         const discriminator = msg.author.discriminator;
         const authorIrcName = ircNickname(
             authorDisplayName,
+            msg.author.username,
             isBot,
             discriminator
         );
@@ -1489,6 +1506,7 @@ discordClient.on("messageUpdate", function (oldMsg, newMsg) {
         const discriminator = oldMsg.author.discriminator;
         const authorIrcName = ircNickname(
             authorDisplayName,
+            oldMsg.author.username,
             isBot,
             discriminator
         );
@@ -1568,6 +1586,7 @@ function joinCommand(channel, discordID, socketID) {
             const discriminator = member.user.discriminator;
             const displayMember = ircNickname(
                 member.displayName,
+                member.user.username,
                 isBot,
                 discriminator
             );
@@ -1805,6 +1824,7 @@ function getDiscordUserFromIRC(recipient, discordID) {
             const isBot = user.bot;
             const discriminator = user.discriminator;
             const displayMember = ircNickname(
+                user.globalName ? user.globalName : user.username,
                 user.username,
                 isBot,
                 discriminator
@@ -1821,6 +1841,7 @@ function getDiscordUserFromIRC(recipient, discordID) {
                 const discriminator = member.user.discriminator;
                 const displayMember = ircNickname(
                     member.displayName,
+                    member.user.username,
                     isBot,
                     discriminator
                 );
@@ -1974,6 +1995,7 @@ let ircServer = net.createServer(netOptions, function (socket) {
                                     discordClient.user.discriminator;
                                 const newNickname = ircNickname(
                                     newuser,
+                                    newuser,
                                     false,
                                     discriminator
                                 );
@@ -2012,6 +2034,7 @@ let ircServer = net.createServer(netOptions, function (socket) {
                                             discordClient.user.discriminator;
                                         const newNickname = ircNickname(
                                             newuser,
+                                            guildMember.user.username,
                                             false,
                                             discriminator
                                         );
