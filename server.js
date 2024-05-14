@@ -2440,7 +2440,8 @@ let ircServer = net.createServer(netOptions, function (socket) {
                         if (parsedLine.params.length > 1) {
                             whoisUser = parsedLine.params[0].trim();
                         }
-                        if (ircDetails[socket.discordid].members.hasOwnProperty(whoisUser)) {
+                        if (ircDetails[socket.discordid].members !== undefined &&
+                            ircDetails[socket.discordid].members.hasOwnProperty(whoisUser)) {
                             const userInfo =
                                 ircDetails[socket.discordid].members[whoisUser];
                             //  "<client> <nick> <username> <host> * :<realname>"
