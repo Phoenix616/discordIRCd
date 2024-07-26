@@ -41,4 +41,5 @@ Private conversations can be initiated from any server but will be automatically
 - Away for idle and dnd discord users. 
 - Mentions are translated both ways. 
 - Basic discord markdown is parsed to irc formatting. 
+- Edit discord messages with `s/old/new` syntax.
 
