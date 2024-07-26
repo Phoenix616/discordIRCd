@@ -2169,6 +2169,15 @@ let ircServer = net.createServer(netOptions, function (socket) {
                                 channelName
                             );
 
+                            if (sendLine.startsWith("s/")) {
+                                const replaceParts = sendLine.match(/^s\/(.+)\/(.+)$/);
+                                if (replaceParts) {
+                                    const search = replaceParts[1];
+                                    const replace = replaceParts[2];
+                                    editMessage(search, replace, channelName, socket.discordid);
+                                    break;
+                                }
+                            }
                             if (
                                 ircDetails[socket.discordid].lastPRIVMSG
                                     .length > 3
@@ -2406,7 +2415,7 @@ let ircServer = net.createServer(netOptions, function (socket) {
                             case 2:
                                 let modeLookupChannelParam2 =
                                     parsedLine.params[0].substring(1);
-                                if (parsedLine.params[1] == "+b") {
+                                if (parsedLine.params[1] === "+b") {
                                     //RPL_ENDOFBANLIST (368)
                                     // "<client> <channel> :End of channel ban list"
                                     // static ban list just so it doesn't break things, WONTFIX
@@ -2454,7 +2463,7 @@ let ircServer = net.createServer(netOptions, function (socket) {
                         break;
                     default:
                         //ERR_UNKNOWNCOMMAND (421)
-                        if (parsedLine.command != "CAP") {
+                        if (parsedLine.command !== "CAP") {
                             //double-check again for CAP here just in case
                             let ERR_UNKNOWNCOMMAND = `:${configuration.ircServer.hostname} 421 ${socket.nickname} ${parsedLine.command} :Unknown command (or not implemented yet)\r\n`;
                             sendToIRC(
@@ -2476,12 +2485,34 @@ let ircServer = net.createServer(netOptions, function (socket) {
         ircClients.splice(ircClients.indexOf(socket), 1);
 
         if (configuration.matchConnectedStatus) {
-            if (ircClients == 0) {
+            if (ircClients === 0) {
                 discordClient.user.setStatus("dnd"); // set status to DnD since no clients are connected
             }
         }
     });
 });
+
+function editMessage(search, replace, channelName, discordid) {
+    console.log(`Trying to replace '${search}' with '${replace}' in ${discordid} ${channelName}`);
+    discordClient.channels
+        .resolve(ircDetails[discordid].channels[channelName].id)
+        .messages.fetch({limit: 10})
+        .then((messages) => {
+            let lastMatchingMessage = null;
+            messages.forEach((msg) => {
+                if (msg.author.id === discordClient.user.id && msg.content.includes(search) && msg.editable) {
+                    console.log(`Found matching message '${msg.content}'`);
+                    lastMatchingMessage = msg;
+                }
+
+            });
+            // replace in last message found
+            if (lastMatchingMessage) {
+                console.log(`Replacing in '${lastMatchingMessage.content}'!`);
+                lastMatchingMessage.edit(lastMatchingMessage.content.replace(search, replace));
+            }
+        });
+}
 
 // Function for sending messages to the connect irc clients
 function sendToIRC(discordServerId, line, ircid = 0) {
