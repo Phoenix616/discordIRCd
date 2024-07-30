@@ -2492,10 +2492,10 @@ let ircServer = net.createServer(netOptions, function (socket) {
     });
 });
 
-function editMessage(search, replace, channelName, discordServerid) {
-    console.log(`Trying to replace '${search}' with '${replace}' in ${discordServerid} ${channelName}`);
+function editMessage(search, replace, channelName, discordid) {
+    console.log(`Trying to replace '${search}' with '${replace}' in ${discordid} ${channelName}`);
     discordClient.channels
-        .resolve(ircDetails[discordServerid].channels[channelName].id)
+        .resolve(ircDetails[discordid].channels[channelName].id)
         .messages.fetch({limit: 10})
         .then((messages) => {
             let lastMatchingMessage = null;
@@ -2509,21 +2509,7 @@ function editMessage(search, replace, channelName, discordServerid) {
             // replace in last message found
             if (lastMatchingMessage) {
                 console.log(`Replacing in '${lastMatchingMessage.content}'!`);
-
-                let shortenedMsg = lastMatchingMessage.content.substring(0, 100);
-                shortenedMsg = shortenedMsg.replace(/\r?\n/g, "\\n");
-                if (lastMatchingMessage.content.length > 100) {
-                    shortenedMsg += "...";
-                }
-                lastMatchingMessage.edit(lastMatchingMessage.content.replace(search, replace)).then(newMsg => {
-                    const updateInfo = `:_!${discordClient.user.id}@whatever PRIVMSG #${channelName} :\x1DYou edited your message\x0F "${shortenedMsg}":\r\n`;
-                    ircDetails[discordServerid].channels[
-                        channelName
-                        ].joined.forEach(function (socketID) {
-                        sendToIRC(discordServerid, updateInfo, socketID);
-                    });
-                    handleChannelMessage(newMsg);
-                });
+                lastMatchingMessage.edit(lastMatchingMessage.content.replace(search, replace));
             }
         });
 }
