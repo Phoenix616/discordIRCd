@@ -6,7 +6,7 @@ if (!configuration.DEBUG) {
     console.log = function () {};
 }
 
-const Discord = require("discord.js-selfbot-v13");
+const Discord = require("discord.js-selfbot-youtsuho-v13");
 const fs = require("fs");
 let net;
 let netOptions = {};
@@ -208,23 +208,32 @@ function parseIRCLine(line, discordID, channel) {
 
     // Discord-style username mentions (@User)
     const mentionDiscordRegex = /(@.+?\s)/g;
-    const mentionDiscordFound = line.match(mentionDiscordRegex);
+    const mentionDiscordFound = `${line} `.match(mentionDiscordRegex);
     if (mentionDiscordFound) {
         mentionDiscordFound.forEach(function (mention) {
-            const userNickname = mention.replace(/@(.+?)\s/, "$1");
+            const mentionedName = mention.replace(/@(.+?)\s/, "$1");
 
             if (
                 ircDetails[discordID].channels[channel].members.hasOwnProperty(
-                    userNickname
+                    mentionedName
                 )
             ) {
                 const userID =
                     ircDetails[discordID].channels[channel].members[
-                        userNickname
+                        mentionedName
                     ].id;
                 const replaceRegex = new RegExp(mention, "g");
 
-                line = line.replace(replaceRegex, `<@!${userID}> `);
+                line = `${line} `.replace(replaceRegex, `<@!${userID}> `).trimEnd();
+            } else {
+                const roleObject = discordClient.guilds.resolve(discordID)
+                    .roles.cache.find((role) => role.name === mentionedName);
+
+                if (roleObject) {
+                    const replaceRegex = new RegExp(mention, "g");
+
+                    line = `${line} `.replace(replaceRegex, `<@&${roleObject.id}> `).trimEnd();
+                }
             }
         });
     }
@@ -254,7 +263,7 @@ function parseIRCLine(line, discordID, channel) {
 
     // Channel names
     const mentionChannelRegex = /(#.+?\s)/g;
-    const mentionChannelFound = line.match(mentionChannelRegex);
+    const mentionChannelFound = `${line} `.match(mentionChannelRegex);
     if (mentionChannelFound) {
         mentionChannelFound.forEach(function (mention) {
             const channelName = mention.replace(/#(.+?)\s/, "$1");
@@ -263,7 +272,7 @@ function parseIRCLine(line, discordID, channel) {
                 const channelID = ircDetails[discordID].channels[channelName].id;
                 const replaceRegex = new RegExp(mention, "g");
 
-                line = line.replace(replaceRegex, `<#${channelID}> `);
+                line = `${line} `.replace(replaceRegex, `<#${channelID}> `).trimEnd();
             }
         });
     }

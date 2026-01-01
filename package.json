@@ -23,8 +23,8 @@
   "homepage": "https://github.com/creesch/discordIRCd#readme",
   "dependencies": {
     "bufferutil": "^4.0.1",
-    "discord.js-selfbot-v13": "^2.14",
-    "erlpack": "github:hammerandchisel/erlpack",
+    "debug": "^4.4.3",
+    "discord.js-selfbot-youtsuho-v13": "3.7.2",
     "request": "^2.81.0"
   }
 }
